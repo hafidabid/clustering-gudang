@@ -1,3 +1,4 @@
+import math
 import sys
 import numpy as np
 import pandas as pd
@@ -39,6 +40,8 @@ class KMeansAlgorithm(object):
 
         return temp_centroids
 
+    def __calculate_feature(self, distance, *args):
+        pass
 
     def fit_model(self, num_iter):
         """
@@ -57,19 +60,21 @@ class KMeansAlgorithm(object):
         for i in range(num_iter):
             # First compute the Euclidean distances and store them in array
             EucDist = np.array([]).reshape(self.m, 0)
+            # TODO: setelah jarak di vincenty, coba di euclidean dengan params lainya
+
             for k in range(self.K):
-                #dist = np.sum((self.data - self.centroids[:,k])**2, axis=1)
-                dist = []
-                # using vincenty distance
-                centroid = self.centroids[:,k]
-                for d in self.data:
-                    dist.append(vincenty((d[0],d[1]),(centroid[0], centroid[1])))
+                dist = np.sum((self.data - self.centroids[:,k])**2, axis=1)
+                # dist = []
+                # # using vincenty distance
+                # centroid = self.centroids[:,k]
+                # for d in self.data:
+                #     jarak = vincenty((d[0],d[1]),(centroid[0], centroid[1]))
+                #     dist.append(jarak)
 
 
                 EucDist = np.c_[EucDist, dist]
-            # take the min distance
-            min_dist = np.argmin(EucDist, axis=1) + 1
 
+            min_dist = np.argmin(EucDist, axis=1) + 1
             # Begin iterations
             soln_temp = {} # temp dict which stores solution for one iteration - Y
 
@@ -80,13 +85,15 @@ class KMeansAlgorithm(object):
                 # regroup the data points based on the cluster index
                 soln_temp[min_dist[i]] = np.c_[soln_temp[min_dist[i]], self.data[i]]
 
+
+            #assert 1 == 2
             for k in range(self.K):
                 soln_temp[k+1] = soln_temp[k+1].T
 
             # Updating centroids as the new mean for each cluster
+
             for k in range(self.K):
                 self.centroids[:,k] = np.mean(soln_temp[k+1], axis=0)
-
             self.result = soln_temp
 
     def plot_kmeans(self):
@@ -105,13 +112,13 @@ class KMeansAlgorithm(object):
         ax1 = plt.subplot(111)
         # plot each cluster
         for k in range(self.K):
-                ax1.scatter(self.result[k+1][:,0], self.result[k+1][:,1],
+                ax1.scatter(self.result[k+1][:,1],self.result[k+1][:,0],
                                         c = colors[k], label = labels[k])
         # plot centroids
-        ax1.scatter(self.centroids[0,:], self.centroids[1,:], #alpha=.5,
+        ax1.scatter(self.centroids[1,:], self.centroids[0,:], #alpha=.5,
                                 s = 300, c = 'lime', label = 'centroids')
-        plt.xlabel(self.x_label) # first column of df
-        plt.ylabel(self.y_label) # second column of df
+        plt.xlabel(self.y_label) # first column of df
+        plt.ylabel(self.x_label) # second column of df
         plt.title('Plot of K Means Clustering Algorithm')
         plt.legend()
 
@@ -143,7 +150,7 @@ class KMeansAlgorithm(object):
         plot
             elbow plot - k values vs wcss values to find optimal K value.
         """
-
+        #TODO: Investigate this!!!
         wcss_vals = np.array([])
         for k_val in range(1, self.K):
             results, centroids = self.predict()
@@ -179,8 +186,6 @@ if __name__ == "__main__":
     dataset = df[['city_name', 'district_name', 'avg_demand_baseline', 'demand_target', 'lat', 'long']]
 
     unscaled_dataset = (dataset[['lat', 'long']])
-    km = KMeansAlgorithm(unscaled_dataset,6)
+    km = KMeansAlgorithm(unscaled_dataset, 5)
     km.fit_model(100)
-    y_pred = km.predict()
-    print(y_pred)
     km.plot_kmeans()
