@@ -157,6 +157,11 @@ class KMeansAlgorithm(object):
             wcss=0
             for k in range(k_val):
                 wcss += np.sum((results[k+1] - centroids[k,:])**2)
+            #print(results, centroids, wcss_vals, wcss)
+
+            #mean wcss
+            wcss = wcss/k_val
+
             wcss_vals = np.append(wcss_vals, wcss)
         # Plot K values vs WCSS values
         K_vals = np.arange(1, self.K)
@@ -188,4 +193,4 @@ if __name__ == "__main__":
     unscaled_dataset = (dataset[['lat', 'long']])
     km = KMeansAlgorithm(unscaled_dataset, 5)
     km.fit_model(100)
-    km.plot_kmeans()
+    km.plot_elbow()
