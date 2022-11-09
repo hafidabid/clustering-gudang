@@ -13,6 +13,15 @@ class KMeansAlgorithm:
         self.classification = [-1 for _ in range(self.n_population)]
         self.weight_factor = weight_factor if weight_factor is not None else [1 for _ in range(self.n_population)]
         self.wcss = 0
+        self.centroid_lock = False
+
+    def set_weight_factor(self, weight_factor):
+        self.weight_factor = weight_factor
+
+    def lock_init_centroid(self, stats=True):
+        self.centroid_lock = stats
+        self.__init_centroid()
+        self.first_centroid = self.centroid.copy()
 
 
     def __init_centroid(self):
@@ -20,6 +29,10 @@ class KMeansAlgorithm:
         format of centroid is (lat, long)
         :return:
         """
+        if self.centroid_lock:
+            self.centroid = self.first_centroid.copy()
+            return
+
         self.centroid = [(0, 0) for _ in range(self.K)]
         selected_index = []
         for i in range(self.K):
@@ -97,27 +110,31 @@ class KMeansAlgorithm:
     def get_wcss(self):
         return self.wcss
 
-    def visualize_kmeans(self):
+    def visualize_kmeans(self, figsize=(6,6), centroid_size=None, title='Plot of K Means Clustering Algorithm'):
+        centroid_size  = [350 for _ in range(self.K)] if centroid_size is None else centroid_size
         # create arrays for colors and labels based on specified K
         colors = ["red", "green", "blue", "purple", "black", "pink", "orange"]
         labels = ['cluster_' + str(i + 1) for i in range(self.K)]
 
-        fig1 = plt.Figure(figsize=(6,6))
-        ax1 = plt.subplot(111)
+        ax1 = plt.subplot(1,1,1)
+        plt.figure(figsize=figsize)
         # plot each cluster
         dframe = pd.DataFrame()
         dframe = dframe.assign(lat=self.lat_data, long=self.long_data, pred=self.classification,
                                idx=[i for i in range(self.n_population)])
         for k in range(self.K):
-            ax1.scatter(dframe[dframe.pred==k]['long'].tolist(), dframe[dframe.pred==k]['lat'].tolist(),
+            plt.scatter(dframe[dframe.pred==k]['long'].tolist(), dframe[dframe.pred==k]['lat'].tolist(),
                         c=colors[k], label=labels[k])
         # plot centroids
+        i=0
         for c in self.centroid:
-            ax1.scatter(c[1], c[0],  # alpha=.5,
-                        s=300, c='lime', label='centroids')
+            plt.scatter(c[1], c[0],  # alpha=.5,
+                        s=centroid_size[i], c='gold', label='cluster ke-'+str(i), marker="*")
+            i+=1
         plt.xlabel("lat")  # first column of df
         plt.ylabel("long")  # second column of df
-        plt.title('Plot of K Means Clustering Algorithm')
+        plt.title(title)
+
         plt.legend()
 
         return plt.show(block=True)
