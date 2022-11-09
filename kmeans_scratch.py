@@ -19,8 +19,8 @@ class KMeansAlgorithm:
         self.weight_factor = weight_factor
 
     def lock_init_centroid(self, stats=True):
-        self.centroid_lock = stats
         self.__init_centroid()
+        self.centroid_lock = stats
         self.first_centroid = self.centroid.copy()
 
 
@@ -111,25 +111,29 @@ class KMeansAlgorithm:
         return self.wcss
 
     def visualize_kmeans(self, figsize=(6,6), centroid_size=None, title='Plot of K Means Clustering Algorithm'):
-        centroid_size  = [350 for _ in range(self.K)] if centroid_size is None else centroid_size
+
         # create arrays for colors and labels based on specified K
         colors = ["red", "green", "blue", "purple", "black", "pink", "orange"]
         labels = ['cluster_' + str(i + 1) for i in range(self.K)]
 
-        ax1 = plt.subplot(1,1,1)
         plt.figure(figsize=figsize)
+
         # plot each cluster
         dframe = pd.DataFrame()
         dframe = dframe.assign(lat=self.lat_data, long=self.long_data, pred=self.classification,
-                               idx=[i for i in range(self.n_population)])
+                               idx=[i for i in range(self.n_population)], demand=self.df['demand_target'])
         for k in range(self.K):
-            plt.scatter(dframe[dframe.pred==k]['long'].tolist(), dframe[dframe.pred==k]['lat'].tolist(),
-                        c=colors[k], label=labels[k])
+            predicted_dataset = dframe[dframe.pred==k]
+            # plt.scatter(predicted_dataset['long'].tolist(), predicted_dataset[dframe.pred==k]['lat'].tolist(),
+            #             c=colors[k], label=labels[k])
+            for _, d in predicted_dataset.iterrows():
+                plt.scatter(d['long'], d['lat'], c=colors[k], s=d['demand'])
+
         # plot centroids
         i=0
         for c in self.centroid:
             plt.scatter(c[1], c[0],  # alpha=.5,
-                        s=centroid_size[i], c='gold', label='cluster ke-'+str(i), marker="*")
+                        s=500, c='gold', label='cluster ke-'+str(i), marker="*")
             i+=1
         plt.xlabel("lat")  # first column of df
         plt.ylabel("long")  # second column of df
@@ -153,8 +157,9 @@ if __name__ == "__main__":
 
     df = df.assign(lat=data_lat, long=data_long)
     dataset = df[['city_name', 'district_name', 'avg_demand_baseline', 'demand_target', 'lat', 'long']]
-    km = KMeansAlgorithm(dataset, 5, 'lat', 'long')
+    demand_target_data = dataset['demand_target'].tolist()
+    km = KMeansAlgorithm(dataset, 6, 'lat', 'long', demand_target_data)
     km.fit(100)
     print(km.predict())
-    km.visualize_kmeans()
+    km.visualize_kmeans(figsize=(16,9))
 
