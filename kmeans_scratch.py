@@ -2,6 +2,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import random
 from vincenty import vincenty
+import geopandas as gpd
+from geopandas import GeoDataFrame
+from shapely.geometry import Point
 
 class KMeansAlgorithm:
     def __init__(self, df: pd.DataFrame, K:int, lat_column, long_column, weight_factor=None):
@@ -54,6 +57,8 @@ class KMeansAlgorithm:
             s += data[i] * weight[i]
             w += weight[i]
 
+        if w==0:
+            return 0
         return s/w
 
     def __calculate_new_centorid(self, old_centroid, *args):
@@ -142,6 +147,9 @@ class KMeansAlgorithm:
         plt.legend()
 
         return plt.show(block=True)
+
+    def visualize_maps(self, figsize=(6,6), title='Plot of K Means Clustering Algorithm'):
+        pass
 
 if __name__ == "__main__":
     flname = "dataset_cluster_warehouse_exp_2.csv"
