@@ -2,9 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import random
 from vincenty import vincenty
-import geopandas as gpd
-from geopandas import GeoDataFrame
-from shapely.geometry import Point
+
 
 
 class KMeansAlgorithm:
@@ -139,6 +137,7 @@ class KMeansAlgorithm:
         figsize=(6, 6),
         centroid_size=None,
         title="Plot of K Means Clustering Algorithm",
+        alpha_col=None,
     ):
 
         # create arrays for colors and labels based on specified K
@@ -156,12 +155,28 @@ class KMeansAlgorithm:
             idx=[i for i in range(self.n_population)],
             demand=self.df["demand_target"],
         )
+        if alpha_col:
+            dframe = dframe.assign(**{alpha_col: self.df[alpha_col]})
         for k in range(self.K):
             predicted_dataset = dframe[dframe.pred == k]
             # plt.scatter(predicted_dataset['long'].tolist(), predicted_dataset[dframe.pred==k]['lat'].tolist(),
-            #             c=colors[k], label=labels[k])
+            #   c=colors[k], label=labels[k])
+            alp_min, alp_max = 0, 0
+            if alpha_col:
+                alp_max = predicted_dataset[alpha_col].max()
+                alp_min = predicted_dataset[alpha_col].min()
             for _, d in predicted_dataset.iterrows():
-                plt.scatter(d["long"], d["lat"], c=colors[k], s=d["demand"])
+                if alpha_col:
+                    plt.scatter(
+                        d["long"],
+                        d["lat"],
+                        c=colors[k],
+                        s=d["demand"],
+                        alpha=0.3
+                        + ((d[alpha_col] - alp_min) / (alp_max - alp_min) * 0.7),
+                    )
+                else:
+                    plt.scatter(d["long"], d["lat"], c=colors[k], s=d["demand"])
 
         # plot centroids
         i = 0
@@ -184,9 +199,29 @@ class KMeansAlgorithm:
         return plt.show(block=True)
 
     def visualize_maps(
-        self, figsize=(6, 6), title="Plot of K Means Clustering Algorithm"
+        self, title="Plot of K Means Clustering Algorithm", alpha_col=None
     ):
-        pass
+        import plotly.express as px
+        px.set_mapbox_access_token("pk.eyJ1IjoiaGFmaWRhYmkiLCJhIjoiY2tuNXZ2N25uMDg1MjJyczlna3VndmFmNSJ9.VKoc34AfkqZ5uUUODIUBVA")
+        dframe = pd.DataFrame()
+        dframe = dframe.assign(
+            lat=self.lat_data,
+            long=self.long_data,
+            pred=self.classification,
+            idx=[i for i in range(self.n_population)],
+            demand=self.df["demand_target"],
+            areaname=self.df["subdistrict_name"]
+        )
+        if alpha_col:
+            dframe = dframe.assign(**{alpha_col: self.df[alpha_col]})
+
+        if alpha_col:
+            textdata = dframe[alpha_col].tolist()
+            textdata = [str(a) for a in textdata]
+            fig = px.scatter_mapbox(dframe, lat="lat", lon="long", color="pred", size_max=20, zoom=12, size="demand", text=textdata, title=title, hover_name="areaname")
+        else:
+            fig = px.scatter_mapbox(dframe, lat="lat", lon="long", color="pred", size_max=20, zoom=12, size="demand", title=title, hover_name="areaname")
+        fig.show()
 
     def calculate_silhouette(self, prediction):
         result = []
@@ -204,22 +239,17 @@ class KMeansAlgorithm:
             ]
 
             # Calculate silhoutte every point in cluster
-            for _,c in cluster_dataset_now.iterrows():
+            for _, c in cluster_dataset_now.iterrows():
                 a_score = 0
                 b_score = 0
                 for idx, c_inner in cluster_dataset_now.iterrows():
-                    #print(c_inner)
                     if not (c_inner["lat"] == c["lat"] and c["long"] == c["long"]):
                         a_score += vincenty(
-                            (c_inner.lat, c_inner.long),
-                            (c.lat, c.long)
+                            (c_inner.lat, c_inner.long), (c.lat, c.long)
                         )
 
                 for idx, c_outer in cluster_dataset_next.iterrows():
-                    b_score += vincenty(
-                        (c_outer.lat, c_outer.long),
-                        (c.lat, c.long)
-                    )
+                    b_score += vincenty((c_outer.lat, c_outer.long), (c.lat, c.long))
 
                 s_score = (b_score - a_score) / max(a_score, b_score)
                 cluster_result.append(s_score)
@@ -250,12 +280,17 @@ if __name__ == "__main__":
             "demand_target",
             "lat",
             "long",
+            'subdistrict_name'
         ]
     ]
+    rent_fee = [random.randint(1000, 2000) for _ in range(len(dataset))]
+    dataset = dataset.assign(rent_fee=rent_fee)
     demand_target_data = dataset["demand_target"].tolist()
     km = KMeansAlgorithm(dataset, 6, "lat", "long", demand_target_data)
     km.fit(100)
     print(km.predict())
-    km.visualize_kmeans(figsize=(16, 9))
-    sil = km.calculate_silhouette(km.predict())
-    print(sil)
+    #km.visualize_kmeans(figsize=(16, 9))
+
+    scaled_rf = []
+
+    km.visualize_maps(alpha_col='rent_fee')
