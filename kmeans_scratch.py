@@ -259,6 +259,19 @@ class KMeansAlgorithm:
         return result
 
 
+    def get_mean_cluster_distane(self, cluster):
+        dataset = self.df.assign(prediction=self.predict())
+        cluster_dataset_now = (dataset[dataset.prediction == cluster])[
+            ["lat", "long", "prediction"]
+        ]
+        total_distance = 0
+        for _, c in cluster_dataset_now.iterrows():
+            total_distance += vincenty(
+                self.centroid[cluster], (c.lat, c.long)
+            )
+
+        return total_distance/len(cluster_dataset_now)
+
 if __name__ == "__main__":
     flname = "dataset_cluster_warehouse_exp_2.csv"
     df = pd.read_csv(flname)
