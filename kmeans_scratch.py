@@ -2,7 +2,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import random
 from vincenty import vincenty
+import plotly.graph_objects as go
 
+MAPBOX_API_KEY = "pk.eyJ1IjoiaGFmaWRhYmkiLCJhIjoiY2tuNXZ2N25uMDg1MjJyczlna3VndmFmNSJ9.VKoc34AfkqZ5uUUODIUBVA"
 
 
 class KMeansAlgorithm:
@@ -202,7 +204,8 @@ class KMeansAlgorithm:
         self, title="Plot of K Means Clustering Algorithm", alpha_col=None
     ):
         import plotly.express as px
-        px.set_mapbox_access_token("pk.eyJ1IjoiaGFmaWRhYmkiLCJhIjoiY2tuNXZ2N25uMDg1MjJyczlna3VndmFmNSJ9.VKoc34AfkqZ5uUUODIUBVA")
+
+        px.set_mapbox_access_token(MAPBOX_API_KEY)
         dframe = pd.DataFrame()
         dframe = dframe.assign(
             lat=self.lat_data,
@@ -210,17 +213,50 @@ class KMeansAlgorithm:
             pred=self.classification,
             idx=[i for i in range(self.n_population)],
             demand=self.df["demand_target"],
-            areaname=self.df["subdistrict_name"]
+            areaname=self.df["subdistrict_name"],
         )
+
+
         if alpha_col:
             dframe = dframe.assign(**{alpha_col: self.df[alpha_col]})
 
         if alpha_col:
             textdata = dframe[alpha_col].tolist()
             textdata = [str(a) for a in textdata]
-            fig = px.scatter_mapbox(dframe, lat="lat", lon="long", color="pred", size_max=20, zoom=12, size="demand", text=textdata, title=title, hover_name="areaname")
+            fig = px.scatter_mapbox(
+                dframe,
+                lat="lat",
+                lon="long",
+                color="pred",
+                size_max=20,
+                zoom=12,
+                size="demand",
+                text=textdata,
+                title=title,
+                hover_name="areaname",
+            )
         else:
-            fig = px.scatter_mapbox(dframe, lat="lat", lon="long", color="pred", size_max=20, zoom=12, size="demand", title=title, hover_name="areaname")
+            fig = px.scatter_mapbox(
+                dframe,
+                lat="lat",
+                lon="long",
+                color="pred",
+                size_max=20,
+                zoom=12,
+                size="demand",
+                title=title,
+                hover_name="areaname",
+            )
+
+        fig.add_trace(go.Scattermapbox(
+            mode="markers",
+            lat=[a[0] for a in self.centroid],
+            lon=[a[1] for a in self.centroid],
+            hovertext="centroid",
+            text="Centroid",
+            opacity=0.85,
+            marker={'size':25, 'color' : "#000000", 'symbol' : 'star'},
+        ))
         fig.show()
 
     def calculate_silhouette(self, prediction):
@@ -258,7 +294,6 @@ class KMeansAlgorithm:
 
         return result
 
-
     def get_mean_cluster_distane(self, cluster):
         dataset = self.df.assign(prediction=self.predict())
         cluster_dataset_now = (dataset[dataset.prediction == cluster])[
@@ -266,11 +301,10 @@ class KMeansAlgorithm:
         ]
         total_distance = 0
         for _, c in cluster_dataset_now.iterrows():
-            total_distance += vincenty(
-                self.centroid[cluster], (c.lat, c.long)
-            )
+            total_distance += vincenty(self.centroid[cluster], (c.lat, c.long))
 
-        return total_distance/len(cluster_dataset_now)
+        return total_distance / len(cluster_dataset_now)
+
 
 if __name__ == "__main__":
     flname = "dataset_cluster_warehouse_exp_2.csv"
@@ -293,7 +327,7 @@ if __name__ == "__main__":
             "demand_target",
             "lat",
             "long",
-            'subdistrict_name'
+            "subdistrict_name",
         ]
     ]
     rent_fee = [random.randint(1000, 2000) for _ in range(len(dataset))]
@@ -302,8 +336,8 @@ if __name__ == "__main__":
     km = KMeansAlgorithm(dataset, 6, "lat", "long", demand_target_data)
     km.fit(100)
     print(km.predict())
-    #km.visualize_kmeans(figsize=(16, 9))
+    # km.visualize_kmeans(figsize=(16, 9))
 
     scaled_rf = []
 
-    km.visualize_maps(alpha_col='rent_fee')
+    km.visualize_maps(alpha_col="rent_fee")
